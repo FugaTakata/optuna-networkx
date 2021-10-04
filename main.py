@@ -38,7 +38,6 @@ def stress(pos, g):
                     source=kj,
                     target=ki,
                     weight='length')
-                print(dij)
                 e = (norm - dij) / dij
                 s += e ** 2
     return s
