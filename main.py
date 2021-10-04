@@ -38,7 +38,7 @@ def stress(pos, g):
                     source=kj,
                     target=ki,
                 )
-                e = (norm - dij) / dij
+                e = (norm - dij)
                 s += e ** 2
     return s
 
