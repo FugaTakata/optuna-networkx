@@ -25,22 +25,23 @@ def stress(pos, g):
     keys = list(pos.keys())
     n = len(keys)
     s = 0
-    for j in range(1, n):
-        for i in range(n):
-            kj = keys[j]
+    for i in range(0, n):
+        for j in range(i + 1, n):
             ki = keys[i]
+            kj = keys[j]
             dx = pos[ki][0] - pos[kj][0]
             dy = pos[ki][1] - pos[kj][1]
             norm = (dx ** 2 + dy ** 2) ** 0.5
-            if ki != kj and nx.has_path(g, source=kj, target=ki):
+            if nx.has_path(g, source=kj, target=ki):
                 dij = nx.shortest_path_length(
                     g,
                     source=kj,
                     target=ki,
-                    weight='length')
+                    weight='length'
+                )
                 e = (norm - dij) / dij
                 s += e ** 2
-    return s
+    return -s
 
 
 def objective(trial):
