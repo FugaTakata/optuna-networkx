@@ -37,29 +37,21 @@ def stress(pos, g):
                     g,
                     source=kj,
                     target=ki,
-                    weight='length'
                 )
                 e = (norm - dij) / dij
                 s += e ** 2
-    return -s
+    return s
 
 
 def objective(trial):
     k = trial.suggest_float('k', 0, 1)
     pos = nx.spring_layout(G, iterations=50, threshold=1e-4, k=k)
-    TG = nx.Graph()
 
-    TG.add_nodes_from(nodes)
-    for (s, t) in edges:
-        l = ((pos[s][0] - pos[t][0]) ** 2 +
-             (pos[s][1] - pos[t][1]) ** 2) ** 0.5
-        TG.add_edge(s, t, length=l)
-
-    return stress(pos, TG)
+    return stress(pos, G)
 
 
 study = optuna.create_study()
-study.optimize(objective, n_trials=200)
+study.optimize(objective, n_trials=50)
 
 best_params = study.best_params
 found_k = best_params['k']
