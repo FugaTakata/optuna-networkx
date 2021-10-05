@@ -45,21 +45,23 @@ def stress(pos, g):
 
 def objective(trial):
     k = trial.suggest_float('k', 0, 1)
-    pos = nx.spring_layout(G, iterations=50, threshold=1e-4, k=k)
+    i = trial.suggest_int('i', 50, 200)
+    pos = nx.spring_layout(G, iterations=i, threshold=1e-4, k=k)
 
     return stress(pos, G)
 
 
 study = optuna.create_study()
-study.optimize(objective, n_trials=50)
+study.optimize(objective, n_trials=200)
 
 best_params = study.best_params
 found_k = best_params['k']
+found_i = best_params['i']
 
-print(f'found k: {found_k}')
+print(f'found k: {found_k}, found i: {found_i}')
 
 
-found_pos = nx.spring_layout(G, iterations=50, threshold=1e-4, k=found_k)
+found_pos = nx.spring_layout(G, iterations=found_i, threshold=1e-4, k=found_k)
 nx.draw(G, pos=found_pos)
 
 
