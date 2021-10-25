@@ -25,6 +25,7 @@ def stress(pos, g):
     keys = list(pos.keys())
     n = len(keys)
     s = 0
+
     for i in range(0, n):
         for j in range(i + 1, n):
             ki = keys[i]
