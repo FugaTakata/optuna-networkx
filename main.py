@@ -28,7 +28,6 @@ def stress(pos, g):
     for i in range(0, n):
         for j in range(i + 1, n):
             ki = keys[i]
-
             kj = keys[j]
             dx = pos[ki][0] - pos[kj][0]
             dy = pos[ki][1] - pos[kj][1]
