@@ -2,6 +2,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import optuna
 import numpy as np
+from optuna import study
 
 
 np.random.seed(10)
@@ -68,7 +69,7 @@ def jaccard_similarity(G, S):
 
 
 def shape_based(G, pos):
-    k = 10
+    k = 4
     # generate shape graph, k may be a hyperparams
     S = k_nearest(pos, k)
     js = jaccard_similarity(G, S)
@@ -85,7 +86,9 @@ def objective_variable_graph(G, shortest_paths):
         stress_value = stress(pos, shortest_paths)
         shape_based_value = shape_based(G, pos)
 
-        return stress_value
+        # return stress_value, shape_based_value
+        # return stress_value
+        return shape_based_value
 
     return objective
 
@@ -102,6 +105,15 @@ def main():
                 G,
                 source=ns,
                 target=nt)
+
+    # study = optuna.create_study()
+    study = optuna.create_study(direction='maximize')
+    # study = optuna.create_study(directions=["minimize", "minimize"])
+    study.optimize(objective_variable_graph(G, shortest_paths), n_trials=10)
+
+    # optuna.visualization.plot_pareto_front(
+    #     study, target_names=["stress_value", "shape_based_value"])
+    # optuna.visualization.plot_param_importances(study)
 
     best_params = study.best_params
     found_k = best_params['k']
