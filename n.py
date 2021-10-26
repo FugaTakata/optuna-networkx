@@ -86,9 +86,9 @@ def objective_variable_graph(G, shortest_paths):
         stress_value = stress(pos, shortest_paths)
         shape_based_value = shape_based(G, pos)
 
-        # return stress_value, shape_based_value
+        return stress_value, shape_based_value
         # return stress_value
-        return shape_based_value
+        # return shape_based_value
 
     return objective
 
@@ -107,15 +107,25 @@ def main():
                 target=nt)
 
     # study = optuna.create_study()
-    study = optuna.create_study(direction='maximize')
-    # study = optuna.create_study(directions=["minimize", "minimize"])
-    study.optimize(objective_variable_graph(G, shortest_paths), n_trials=10)
+    # study = optuna.create_study(direction='maximize')
+    study = optuna.create_study(directions=["minimize", "maximize"])
+    study.optimize(objective_variable_graph(G, shortest_paths), n_trials=1000)
 
-    # optuna.visualization.plot_pareto_front(
-    #     study, target_names=["stress_value", "shape_based_value"])
-    # optuna.visualization.plot_param_importances(study)
+    best_params = study.best_trials[0].params
+    # plot_pareto_front = optuna.visualization.plot_pareto_front(
+    #     study)
+    # param_importance = optuna.visualization.plot_param_importances(
+    #     study, target=lambda t: t.values[0])
+    # plot_countour = optuna.visualization.plot_contour(
+    #     study, target=lambda t: t.values[0])
+    # plot_optimization_history = optuna.visualization.plot_optimization_history(
+    #     study, target=lambda t: t.values[0])
 
-    best_params = study.best_params
+    # plot_pareto_front.show()
+    # param_importance.show()
+    # plot_countour.show()
+    # plot_optimization_history.show()
+
     found_k = best_params['k']
     found_i = best_params['i']
     print(f'found k: {found_k}, found i: {found_i}')
