@@ -1,5 +1,6 @@
 import networkx as nx
 from py2cytoscape.data.cyrest_client import CyRestClient
+import matplotlib.pyplot as plt
 
 cy = CyRestClient(ip='127.0.0.1', port=1234)
 
@@ -36,6 +37,9 @@ def main():
     print(pos)
     # print(g.nodes)
     # print(g_cy.get_nodes())
+    nx.draw(g, pos=pos)
+
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -48,5 +52,5 @@ if __name__ == "__main__":
 #     name='My Network', collection='My network collection')
 # print('Empty network created: SUID = ' + str(network.get_id()))
 
-a = {'data': {'id': '249689', 'shared_name': '499', 'name': '499', 'SUID': 249689, 'id_original': '499',
-              'selected': False}, 'position': {'x': 660.8644527169517, 'y': -899.5105417385441}, 'selected': False}
+{'data': {'id': '249689', 'shared_name': '499', 'name': '499', 'SUID': 249689, 'id_original': '499',
+          'selected': False}, 'position': {'x': 660.8644527169517, 'y': -899.5105417385441}, 'selected': False}
