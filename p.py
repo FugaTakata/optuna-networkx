@@ -3,9 +3,10 @@ import networkx as nx
 import optuna
 
 LAYOUT_NAME = 'kamada-kawai'
+N_TRIALS = 100
 
 
-def stress(pos, shortest_paths):
+def stress(pos, shortest_paths, L):
     keys = list(pos.keys())
     n = len(keys)
 
@@ -18,11 +19,12 @@ def stress(pos, shortest_paths):
             [tx, ty] = pos[kt]
             dx = sx - tx
             dy = sy - ty
-
-            norm = (dx ** 2 + dy ** 2) ** 0.5
+            d = (dx ** 2 + dy ** 2) ** 0.5
             dij = shortest_paths[ks][kt]
-            e = norm - dij
-            s += e ** 2
+            lij = L * dij
+            e = ((d - lij) ** 2) / (dij ** 2)
+            s += e
+
     return s
 
 
@@ -111,7 +113,8 @@ def objective_wrapper(G, shortest_paths):
         for index, row in positions_df.iterrows():
             pos[int(index)] = row.to_list()
 
-        stress_value = stress(pos, shortest_paths)
+        stress_value = stress(pos, shortest_paths,
+                              props['m_nodeDistanceRestLengthConstant'])
         shape_based_value = shape_based(G, pos)
 
         return stress_value, shape_based_value
@@ -129,10 +132,15 @@ def main():
     shortest_paths = get_shortestpaths(LG)
 
     study = optuna.create_study(directions=['minimize', 'maximize'])
-    study.optimize(objective_wrapper(LG, shortest_paths), n_trials=10)
+    study.optimize(objective_wrapper(LG, shortest_paths), n_trials=N_TRIALS)
+
+    for best in study.best_trials:
+        best_params = best.params
+        pfc.set_layout_properties(layout_name=LAYOUT_NAME,
+                                  properties_dict=best_params)
+        pfc.layout_network(layout_name=LAYOUT_NAME)
 
     best_params = study.best_trials[0].params
-    print(best_params)
     pfc.set_layout_properties(layout_name=LAYOUT_NAME,
                               properties_dict=best_params)
     pfc.layout_network(layout_name=LAYOUT_NAME)
