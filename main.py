@@ -1,69 +1,158 @@
-from networkx.algorithms.shortest_paths import weighted
-import numpy as np
 import networkx as nx
-import matplotlib.pyplot as plt
+import py4cytoscape as pfc
 import optuna
 
-import data
 
-np.random.seed(10)
-
-G = nx.Graph()
-
-nodes = []
-edges = []
-for node in data.data['nodes']:
-    nodes.append((node['id'], {'name': node['name']}))
-for edge in data.data['links']:
-    edges.append((edge['source'], edge['target']))
-
-G.add_nodes_from(nodes)
-G.add_edges_from(edges)
+LAYOUT_NAME = 'kamada-kawai'
+N_TRIALS = 100
+K_NEAREST_K = 5
+TARGET_FOLDER = f'{K_NEAREST_K}-nearest'
+IMAGES_FOLDER = 'images'
+EXPORT_IMG_TYPE = 'png'
 
 
-def stress(pos, g):
-    keys = list(pos.keys())
-    n = len(keys)
+def get_shortest_paths(G):
+    shortest_paths = dict(nx.all_pairs_shortest_path_length(G))
+    return shortest_paths
+
+
+def get_coordinates():
+    coordinates = []
+    for _index, row in pfc.get_node_position().iterrows():
+        coordinates.append(row.to_dict())
+
+    return coordinates
+
+
+def calc_distance(sx, sy, tx, ty):
+    dx = sx - tx
+    dy = sy - ty
+    distance = (dx ** 2 + dy ** 2) ** 0.5
+
+    return distance
+
+
+def stress(coordinates, distance, K, L):
+    n = len(coordinates)
     s = 0
 
-    for i in range(0, n):
-        for j in range(i + 1, n):
-            ki = keys[i]
-            kj = keys[j]
-            dx = pos[ki][0] - pos[kj][0]
-            dy = pos[ki][1] - pos[kj][1]
+    for i in range(1, n):
+        for j in range(0, i):
+            dx = coordinates[i]['x'] - coordinates[j]['x']
+            dy = coordinates[i]['y'] - coordinates[j]['y']
             norm = (dx ** 2 + dy ** 2) ** 0.5
-            if nx.has_path(g, source=kj, target=ki):
-                dij = nx.shortest_path_length(
-                    g,
-                    source=kj,
-                    target=ki,
-                )
-                e = (norm - dij)
-                s += e ** 2
+
+            dij = distance[j][i]
+            lij = L * dij
+            kij = K / (dij ** 2)
+            e = (kij * ((norm - lij) ** 2)) / 2
+
+            s += e
     return s
 
 
-def objective(trial):
-    k = trial.suggest_float('k', 0, 1)
-    i = trial.suggest_int('i', 50, 200)
-    pos = nx.spring_layout(G, iterations=i, threshold=1e-4, k=k)
+def k_nearest(coordinates, K):
+    G = nx.DiGraph()
+    n = len(coordinates)
 
-    return stress(pos, G)
+    distances = []
+    for si, sc in enumerate(coordinates):
+        distances.append([0] * n)
+        for ti, tc in enumerate(coordinates):
+            distances[si][ti] = {}
+            distances[si][ti]['si'] = si
+            distances[si][ti]['ti'] = ti
+            if si == ti:
+                distances[si][ti]['distance'] = float('inf')
+            else:
+                distances[si][ti]['distance'] = calc_distance(
+                    sc['x'], sc['y'], tc['x'], tc['y'])
+
+    for si, sc in enumerate(coordinates):
+        distances[si].sort(key=lambda x: x['distance'])
+
+    G.add_nodes_from(range(len(coordinates)))
+    for si, sd in enumerate(distances):
+        for td in distances[si][:K]:
+            G.add_edge(td['si'], td['ti'])
+
+    return G
 
 
-study = optuna.create_study()
-study.optimize(objective, n_trials=200)
+def jaccard_similarity_sum(G, S):
+    s = 0
+    for node in G.nodes:
+        g_n = [n for n in G.neighbors(node)]
+        s_n = [n for n in S.neighbors(node)]
+        s += len(set(g_n) & set(s_n)) / len(set(g_n + s_n))
 
-best_params = study.best_params
-found_k = best_params['k']
-found_i = best_params['i']
-
-print(f'found k: {found_k}, found i: {found_i}')
-
-
-found_pos = nx.spring_layout(G, iterations=found_i, threshold=1e-4, k=found_k)
-nx.draw(G, pos=found_pos)
+    return s / len(G.nodes)
 
 
-plt.show()
+def shape_based(G, coordinates):
+    S = k_nearest(coordinates, K_NEAREST_K)
+
+    js_v = jaccard_similarity_sum(G, S)
+
+    return js_v
+
+
+def objective_wrapper(G, shortest_paths):
+    pfc.delete_all_networks()
+    suid = pfc.create_network_from_networkx(G)
+
+    def objective(trial):
+        props = {'m_averageIterationsPerNode': trial.suggest_float('m_averageIterationsPerNode', 0, 100),
+                 'm_nodeDistanceStrengthConstant': trial.suggest_float('m_nodeDistanceStrengthConstant', 0, 50),
+                 'm_nodeDistanceRestLengthConstant': trial.suggest_float('m_nodeDistanceRestLengthConstant', 0, 100),
+                 'm_disconnectedNodeDistanceSpringStrength': trial.suggest_float('m_disconnectedNodeDistanceSpringStrength', 0, 1),
+                 'm_disconnectedNodeDistanceSpringRestLength': trial.suggest_float('m_disconnectedNodeDistanceSpringRestLength', 0, 10000),
+                 'm_anticollisionSpringStrength': trial.suggest_float('m_anticollisionSpringStrength', 0, 1),
+                 'm_layoutPass': trial.suggest_int('m_layoutPass', 0, 5),
+                 'singlePartition': False,
+                 'unweighted': False,
+                 'randomize': False
+                 }
+
+        pfc.set_layout_properties(
+            layout_name=LAYOUT_NAME, properties_dict=props)
+        pfc.layout_network(layout_name=LAYOUT_NAME)
+
+        coordinates = get_coordinates()
+        stress_v = stress(coordinates, shortest_paths,
+                          props['m_disconnectedNodeDistanceSpringStrength'],
+                          props['m_nodeDistanceRestLengthConstant'])
+        shape_based_v = shape_based(G, coordinates)
+
+        return stress_v, shape_based_v
+
+    return objective
+
+
+def main():
+    G = nx.scale_free_graph(100)
+    UG = nx.to_undirected(G)
+
+    largest_cc = max(nx.connected_components(UG), key=len)
+    LG = UG.subgraph(largest_cc)
+
+    shortest_paths = get_shortest_paths(LG)
+
+    study = optuna.create_study(directions=['minimize', 'maximize'])
+    study.optimize(objective_wrapper(LG, shortest_paths), n_trials=N_TRIALS)
+
+    for best in study.best_trials:
+        id = best._trial_id
+        best_params = best.params
+        pfc.set_layout_properties(layout_name=LAYOUT_NAME,
+                                  properties_dict=best_params)
+        pfc.layout_network(layout_name=LAYOUT_NAME)
+        pfc.export_image(f"{IMAGES_FOLDER}/{TARGET_FOLDER}/{id}", type=EXPORT_IMG_TYPE,
+                         resolution=600, overwrite_file=True)
+
+    plot_pareto_front = optuna.visualization.plot_pareto_front(study)
+    plot_pareto_front.show()
+
+
+if __name__ == '__main__':
+    main()
