@@ -1,14 +1,16 @@
 import networkx as nx
 import py4cytoscape as pfc
 import optuna
+import matplotlib as plt
+
+from shape_based import shape_based
+from stress import stress
 
 
 LAYOUT_NAME = 'kamada-kawai'
-N_TRIALS = 100
-K_NEAREST_K = 5
-TARGET_FOLDER = f'{K_NEAREST_K}-nearest'
-IMAGES_FOLDER = 'images'
-EXPORT_IMG_TYPE = 'png'
+N_TRIALS = 5
+
+EXPORT_IMG_TYPE = 'svg'
 
 
 def get_shortest_paths(G):
@@ -18,86 +20,13 @@ def get_shortest_paths(G):
 
 def get_coordinates():
     coordinates = []
-    for _index, row in pfc.get_node_position().iterrows():
+    for index, row in pfc.get_node_position().iterrows():
         coordinates.append(row.to_dict())
 
     return coordinates
 
 
-def calc_distance(sx, sy, tx, ty):
-    dx = sx - tx
-    dy = sy - ty
-    distance = (dx ** 2 + dy ** 2) ** 0.5
-
-    return distance
-
-
-def stress(coordinates, distance, K, L):
-    n = len(coordinates)
-    s = 0
-
-    for i in range(1, n):
-        for j in range(0, i):
-            dx = coordinates[i]['x'] - coordinates[j]['x']
-            dy = coordinates[i]['y'] - coordinates[j]['y']
-            norm = (dx ** 2 + dy ** 2) ** 0.5
-
-            dij = distance[j][i]
-            lij = L * dij
-            kij = K / (dij ** 2)
-            e = (kij * ((norm - lij) ** 2)) / 2
-
-            s += e
-    return s
-
-
-def k_nearest(coordinates, K):
-    G = nx.DiGraph()
-    n = len(coordinates)
-
-    distances = []
-    for si, sc in enumerate(coordinates):
-        distances.append([0] * n)
-        for ti, tc in enumerate(coordinates):
-            distances[si][ti] = {}
-            distances[si][ti]['si'] = si
-            distances[si][ti]['ti'] = ti
-            if si == ti:
-                distances[si][ti]['distance'] = float('inf')
-            else:
-                distances[si][ti]['distance'] = calc_distance(
-                    sc['x'], sc['y'], tc['x'], tc['y'])
-
-    for si, sc in enumerate(coordinates):
-        distances[si].sort(key=lambda x: x['distance'])
-
-    G.add_nodes_from(range(len(coordinates)))
-    for si, sd in enumerate(distances):
-        for td in distances[si][:K]:
-            G.add_edge(td['si'], td['ti'])
-
-    return G
-
-
-def jaccard_similarity_sum(G, S):
-    s = 0
-    for node in G.nodes:
-        g_n = [n for n in G.neighbors(node)]
-        s_n = [n for n in S.neighbors(node)]
-        s += len(set(g_n) & set(s_n)) / len(set(g_n + s_n))
-
-    return s / len(G.nodes)
-
-
-def shape_based(G, coordinates):
-    S = k_nearest(coordinates, K_NEAREST_K)
-
-    js_v = jaccard_similarity_sum(G, S)
-
-    return js_v
-
-
-def objective_wrapper(G, shortest_paths):
+def objective_wrapper(G, shortest_paths, K):
     pfc.delete_all_networks()
     suid = pfc.create_network_from_networkx(G)
 
@@ -122,7 +51,7 @@ def objective_wrapper(G, shortest_paths):
         stress_v = stress(coordinates, shortest_paths,
                           props['m_disconnectedNodeDistanceSpringStrength'],
                           props['m_nodeDistanceRestLengthConstant'])
-        shape_based_v = shape_based(G, coordinates)
+        shape_based_v = shape_based(G, coordinates, K)
 
         return stress_v, shape_based_v
 
@@ -131,27 +60,38 @@ def objective_wrapper(G, shortest_paths):
 
 def main():
     G = nx.scale_free_graph(100)
+    G = nx.Graph(G)
+
     UG = nx.to_undirected(G)
 
     largest_cc = max(nx.connected_components(UG), key=len)
     LG = UG.subgraph(largest_cc)
 
     shortest_paths = get_shortest_paths(LG)
+    bests = {}
+    for id in range(1, 10 + 1):
+        K = id
+        TARGET_FOLDER = f'images/{K}-nearest/'
 
-    study = optuna.create_study(directions=['minimize', 'maximize'])
-    study.optimize(objective_wrapper(LG, shortest_paths), n_trials=N_TRIALS)
+        bests[f'{K}-nearest'] = []
 
-    for best in study.best_trials:
-        id = best._trial_id
-        best_params = best.params
-        pfc.set_layout_properties(layout_name=LAYOUT_NAME,
-                                  properties_dict=best_params)
-        pfc.layout_network(layout_name=LAYOUT_NAME)
-        pfc.export_image(f"{IMAGES_FOLDER}/{TARGET_FOLDER}/{id}", type=EXPORT_IMG_TYPE,
-                         resolution=600, overwrite_file=True)
+        study = optuna.create_study(directions=['minimize', 'maximize'])
+        study.optimize(objective_wrapper(
+            LG, shortest_paths, K), n_trials=N_TRIALS)
 
-    plot_pareto_front = optuna.visualization.plot_pareto_front(study)
-    plot_pareto_front.show()
+        for best in study.best_trials:
+            id = best._trial_id
+            bests[f'{K}-nearest'].append(best.values)
+            best_params = best.params
+            pfc.set_layout_properties(layout_name=LAYOUT_NAME,
+                                      properties_dict=best_params)
+            pfc.layout_network(layout_name=LAYOUT_NAME)
+            pfc.export_image(f"{TARGET_FOLDER}{id}", type=EXPORT_IMG_TYPE,
+                             resolution=600, overwrite_file=True)
+
+        plot_pareto_front = optuna.visualization.plot_pareto_front(study)
+        plot_pareto_front.show()
+    print(bests)
 
 
 if __name__ == '__main__':
