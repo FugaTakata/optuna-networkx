@@ -1,0 +1,62 @@
+[
+  {
+    "name": "m_averageIterationsPerNode",
+    "description": "Average number of iteratations for each node:",
+    "type": "double",
+    "value": 75.25348852503949
+  },
+  {
+    "name": "m_nodeDistanceStrengthConstant",
+    "description": "Spring strength:",
+    "type": "double",
+    "value": 28.050977963148558
+  },
+  {
+    "name": "m_nodeDistanceRestLengthConstant",
+    "description": "Spring rest length:",
+    "type": "double",
+    "value": 56.67917452157838
+  },
+  {
+    "name": "m_disconnectedNodeDistanceSpringStrength",
+    "description": "Strength of a 'disconnected' spring:",
+    "type": "double",
+    "value": 0.5628740938827838
+  },
+  {
+    "name": "m_disconnectedNodeDistanceSpringRestLength",
+    "description": "Rest length of a 'disconnected' spring:",
+    "type": "double",
+    "value": 5553.135352083418
+  },
+  {
+    "name": "m_anticollisionSpringStrength",
+    "description": "Strength to apply to avoid collisions:",
+    "type": "double",
+    "value": 0.6241235696122108
+  },
+  {
+    "name": "m_layoutPass",
+    "description": "Number of layout passes:",
+    "type": "int",
+    "value": 0
+  },
+  {
+    "name": "singlePartition",
+    "description": "Don't partition graph before layout:",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "name": "unweighted",
+    "description": "Use unweighted edges:",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "name": "randomize",
+    "description": "Randomize graph before layout:",
+    "type": "boolean",
+    "value": false
+  }
+]

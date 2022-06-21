@@ -1,0 +1,74 @@
+[
+  {
+    "name": "update_iterations",
+    "description": "Number of iterations before updating display (0: update only at end):",
+    "type": "int",
+    "value": 0
+  },
+  {
+    "name": "attraction_multiplier",
+    "description": "Divisor to calculate the attraction force:",
+    "type": "double",
+    "value": 0.03
+  },
+  {
+    "name": "repulsion_multiplier",
+    "description": "Multiplier to calculate the repulsion force:",
+    "type": "double",
+    "value": 0.04
+  },
+  {
+    "name": "gravity_multiplier",
+    "description": "Multiplier to calculate the gravity force:",
+    "type": "double",
+    "value": 1
+  },
+  {
+    "name": "conflict_avoidance",
+    "description": "Constant force applied to avoid conflicts:",
+    "type": "double",
+    "value": 20
+  },
+  {
+    "name": "max_distance_factor",
+    "description": "Percent of graph used for node repulsion calculations:",
+    "type": "double",
+    "value": 20
+  },
+  {
+    "name": "spread_factor",
+    "description": "Amount of extra room for layout:",
+    "type": "double",
+    "value": 2
+  },
+  {
+    "name": "temperature",
+    "description": "Initial temperature:",
+    "type": "double",
+    "value": 80
+  },
+  {
+    "name": "nIterations",
+    "description": "Number of iterations:",
+    "type": "int",
+    "value": 500
+  },
+  {
+    "name": "singlePartition",
+    "description": "Don't partition graph before layout:",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "name": "layout3D",
+    "description": "Layout nodes in 3D:",
+    "type": "boolean",
+    "value": false
+  },
+  {
+    "name": "randomize",
+    "description": "Randomize graph before layout:",
+    "type": "boolean",
+    "value": true
+  }
+]
