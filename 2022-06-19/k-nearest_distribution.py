@@ -6,8 +6,8 @@ import optuna
 import matplotlib.pyplot as plt
 import numpy as np
 
-LAYOUT_NAME = 'kamada-kawai'
-# LAYOUT_NAME = 'fruchterman-rheingold'
+# LAYOUT_NAME = 'kamada-kawai'
+LAYOUT_NAME = 'fruchterman-rheingold'
 N_TRIALS = 100
 
 K_FROM = 2
